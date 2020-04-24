@@ -31,7 +31,9 @@ namespace Lab2
                 HostData = Dns.GetHostEntry(HostName);
                 IPendPoint = new IPEndPoint(HostData.AddressList[0], 25000);
                 endPoint = new IPEndPoint(HostData.AddressList[0], 25000);
-                Console.WriteLine("Starting to send packets to " + endPoint.ToString());
+                string endPointString = endPoint.ToString();
+                endPointString = endPointString.Substring(0, endPointString.Length-6);
+                Console.WriteLine("Starting to send packets to " + endPointString);
                 Console.WriteLine();
             }
             catch
@@ -68,13 +70,15 @@ namespace Lab2
                         MsgArrivalTime[i] = DateTime.Now - timestart;
                     }
 
+                    string endPointString = endPoint.ToString();
+                    endPointString = endPointString.Substring(0, endPointString.Length - 2);
                     // Проверка типа полученного пакета.
                     // 11 - ttl expired.
                     if (data[20] == 11)
                     {
                         Console.WriteLine(ttl + "     " + (MsgArrivalTime[0].Milliseconds.ToString())
                             + " мс     " + (MsgArrivalTime[1].Milliseconds.ToString()) + " мс     " + 
-                            (MsgArrivalTime[2].Milliseconds.ToString()) + " мс:    " + endPoint.ToString());
+                            (MsgArrivalTime[2].Milliseconds.ToString()) + " мс:    " + endPointString);
                         Console.WriteLine();
                     }
 
@@ -83,7 +87,7 @@ namespace Lab2
                     {
                         Console.WriteLine(ttl + "     " + (MsgArrivalTime[0].Milliseconds.ToString())
                             + " мс     " + (MsgArrivalTime[1].Milliseconds.ToString()) + " мс     " + 
-                            (MsgArrivalTime[2].Milliseconds.ToString()) + " мс:    " + endPoint.ToString() + ":   the target is reached");
+                            (MsgArrivalTime[2].Milliseconds.ToString()) + " мс:    " + endPointString + ":   the target is reached");
                         break;
                     }
                 }
@@ -124,16 +128,6 @@ namespace Lab2
                 ID = 0;
                 SeqNum = 0;
                 MsgData = Encoding.ASCII.GetBytes("PING");
-            }
-
-            public IcmpPacket(byte[] data, int size)
-            {
-                Type = data[20];
-                Code = data[21];
-                // Чтение 22 и 23 байтов (Checksum).
-                Checksum = BitConverter.ToUInt16(data, 22);
-                DataLength = size - 24;
-                MsgData = data;
             }
 
             public ushort GetChecksum() 
