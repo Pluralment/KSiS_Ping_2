@@ -7,9 +7,9 @@ namespace Lab2
 {
     class Program
     {
-        static int maxTTL = 30;
+        static readonly int maxTTL = 30;
 
-        static void Main(string[] args)
+        static void Main()
         {
             Console.Write("Domain: ");
             string HostName = Console.ReadLine();
@@ -27,9 +27,12 @@ namespace Lab2
             EndPoint endPoint = null;
             try
             {
+                // Получение списка IP-адресов, за которыми закреплен домен.
                 HostData = Dns.GetHostEntry(HostName);
                 IPendPoint = new IPEndPoint(HostData.AddressList[0], 25000);
                 endPoint = new IPEndPoint(HostData.AddressList[0], 25000);
+                Console.WriteLine("Starting to send packets to " + endPoint.ToString());
+                Console.WriteLine();
             }
             catch
             {
@@ -66,13 +69,16 @@ namespace Lab2
                     }
 
                     // Проверка типа полученного пакета.
+                    // 11 - ttl expired.
                     if (data[20] == 11)
                     {
                         Console.WriteLine(ttl + "     " + (MsgArrivalTime[0].Milliseconds.ToString())
                             + " мс     " + (MsgArrivalTime[1].Milliseconds.ToString()) + " мс     " + 
                             (MsgArrivalTime[2].Milliseconds.ToString()) + " мс:    " + endPoint.ToString());
+                        Console.WriteLine();
                     }
 
+                    // 0 - echo-answer.
                     if (data[20] == 0)
                     {
                         Console.WriteLine(ttl + "     " + (MsgArrivalTime[0].Milliseconds.ToString())
@@ -83,34 +89,13 @@ namespace Lab2
                 }
                 catch (SocketException)
                 {
-                    Console.WriteLine(ttl + ": no answer from " + endPoint + " ( dest: " + IPendPoint + ")");
+                    Console.WriteLine(ttl + "     no answer from " + endPoint);
+                    Console.WriteLine();
                     badAttempt++;
 
-                    if (badAttempt == 4)
+                    if (badAttempt == 3)
                     {
                         Console.WriteLine("Impossible to reach the host");
-                    }
-                }
-                finally
-                {
-                    try
-                    {
-                        string ip = endPoint.ToString();
-                        ip = ip.Remove(ip.Length - 6, 6);
-                        if (!ip.StartsWith("192.168"))
-                        {
-                            IPAddress addr = IPAddress.Parse(ip);
-                            Console.WriteLine(addr);
-                        }
-                        Console.WriteLine();
-                    }
-                    catch (SocketException)
-                    {
-                        Console.WriteLine("Cannot get the answer from DNS\n");
-                    }
-                    catch
-                    {
-                        Console.WriteLine("Unknown error occured while trying to get DNS IP\n");
                     }
                 }
             }
@@ -135,16 +120,17 @@ namespace Lab2
                 Type = 8;
                 // Обнуление контрольной суммы для её последующего подсчета.
                 Code = 0;
-                Checksum = 0;
-                MsgData = Encoding.ASCII.GetBytes("PING");
+                Checksum = 0;        
                 ID = 0;
                 SeqNum = 0;
+                MsgData = Encoding.ASCII.GetBytes("PING");
             }
 
             public IcmpPacket(byte[] data, int size)
             {
                 Type = data[20];
                 Code = data[21];
+                // Чтение 22 и 23 байтов (Checksum).
                 Checksum = BitConverter.ToUInt16(data, 22);
                 DataLength = size - 24;
                 MsgData = data;
@@ -168,6 +154,7 @@ namespace Lab2
             // Формирование ICMP-пакета в виде массива байтов.
             public byte[] ToBytes()
             {
+                // byte[DataLength + 1(Type) + 1(Code) + 2(Checksum)].
                 byte[] data = new byte[DataLength + 4];
                 Buffer.BlockCopy(BitConverter.GetBytes(Type), 0, data, 0, 1);
                 Buffer.BlockCopy(BitConverter.GetBytes(Code), 0, data, 1, 1);
